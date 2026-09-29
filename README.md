@@ -38,6 +38,7 @@ Five on-device financial simulators with real-time calculations:
   - Daily streak tracking with calendar visualization
   - Streak Shield: Earned every 10 days (max 2 shields)
   - Automatic protection from streak loss
+  - Milestone celebrations at 7/30/100/365 days, shown once per milestone
 
 - **Leagues**:
   - 5 tiers: Bronze → Silver → Gold → Platinum → Diamond
@@ -137,7 +138,9 @@ ClearPath/
    open ClearPath.xcodeproj
    ```
 
-3. Build and run on simulator or device
+3. Set your own bundle identifier and signing team (Target → Signing & Capabilities) — the checked-in `PRODUCT_BUNDLE_IDENTIFIER` is a placeholder and must be changed to something globally unique before it will register
+
+4. Build and run on simulator or device
 
 ## Debug Menu (Development Only)
 

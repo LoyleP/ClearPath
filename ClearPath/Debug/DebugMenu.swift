@@ -187,12 +187,10 @@ struct DebugMenu: View {
     }
 
     private func addStreak(days: Int) {
-        for i in 0..<days {
-            if let date = Calendar.current.date(byAdding: .day, value: -i, to: Date()) {
-                appState.dataManager.streak.activityCalendar[Calendar.current.startOfDay(for: date)] = .completed
-            }
+        let activityDates = (0..<days).compactMap { offset in
+            Calendar.current.date(byAdding: .day, value: -offset, to: Date())
         }
-        appState.dataManager.streak.currentStreak = days
+        appState.dataManager.debugSetStreak(currentStreak: days, activityDates: activityDates)
     }
 
     private func addCompletedLessons(count: Int) {
@@ -208,7 +206,7 @@ struct DebugMenu: View {
         var mastery = ConceptMastery(conceptID: conceptID)
         mastery.level = 2
         mastery.lastReviewDate = Calendar.current.date(byAdding: .day, value: -10, to: Date())!
-        appState.dataManager.userProgress.conceptMastery[conceptID] = mastery
+        appState.dataManager.debugSetConceptMastery(mastery)
     }
 }
 
@@ -254,13 +252,3 @@ extension View {
     }
 }
 #endif
-
-// MARK: - AppStateController Debug Extension
-extension AppStateController {
-    #if DEBUG
-    /// Force transition to any state (DEBUG only, bypasses validation)
-    func forceState(_ newState: AppState) {
-        state = newState
-    }
-    #endif
-}

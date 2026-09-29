@@ -179,6 +179,11 @@ final class AppDataManager {
         return success
     }
 
+    func markMilestoneCelebrated(_ days: Int) {
+        streak.celebratedMilestones.insert(days)
+        saveData()
+    }
+
     // MARK: - Money Score
     func updateMoneyScore() {
         let previousScore = moneyScore.totalScore
@@ -289,4 +294,21 @@ final class AppDataManager {
         dailyMoneyLabRunUsed = false
         savedScenarios = []
     }
+
+    // MARK: - Debug Helpers
+    #if DEBUG
+    /// Set the current streak and backfill activity calendar entries (DEBUG only)
+    func debugSetStreak(currentStreak: Int, activityDates: [Date] = []) {
+        streak.currentStreak = currentStreak
+        for date in activityDates {
+            streak.activityCalendar[Calendar.current.startOfDay(for: date)] = .completed
+        }
+        saveData()
+    }
+
+    /// Insert or overwrite a concept's mastery record (DEBUG only)
+    func debugSetConceptMastery(_ mastery: ConceptMastery) {
+        userProgress.conceptMastery[mastery.conceptID] = mastery
+    }
+    #endif
 }

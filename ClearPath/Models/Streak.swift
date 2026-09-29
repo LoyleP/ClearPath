@@ -9,6 +9,7 @@ struct Streak: Codable, Equatable {
     var activityCalendar: [Date: DayStatus]
     var lastRepairDate: Date?
     var isFirstStreakReset: Bool
+    var celebratedMilestones: Set<Int>
 
     init(
         currentStreak: Int = 0,
@@ -17,7 +18,8 @@ struct Streak: Codable, Equatable {
         lastActivityDate: Date? = nil,
         activityCalendar: [Date: DayStatus] = [:],
         lastRepairDate: Date? = nil,
-        isFirstStreakReset: Bool = true
+        isFirstStreakReset: Bool = true,
+        celebratedMilestones: Set<Int> = []
     ) {
         self.currentStreak = currentStreak
         self.bestStreak = bestStreak
@@ -26,6 +28,7 @@ struct Streak: Codable, Equatable {
         self.activityCalendar = activityCalendar
         self.lastRepairDate = lastRepairDate
         self.isFirstStreakReset = isFirstStreakReset
+        self.celebratedMilestones = celebratedMilestones
     }
 
     // Maximum shields that can be held

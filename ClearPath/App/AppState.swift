@@ -158,4 +158,12 @@ final class AppStateController {
         paywallDismissals = 0
         lastPaywallShown = nil
     }
+
+    // MARK: - Debug
+    #if DEBUG
+    /// Force transition to any state (DEBUG only, bypasses validation)
+    func forceState(_ newState: AppState) {
+        state = newState
+    }
+    #endif
 }

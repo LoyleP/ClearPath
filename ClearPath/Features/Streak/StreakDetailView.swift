@@ -44,21 +44,29 @@ struct StreakDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingMilestone) {
-            if let milestone = achievedMilestone {
-                MilestoneCelebrationView(milestone: milestone)
+        .overlay {
+            if showingMilestone, let milestone = achievedMilestone {
+                MilestoneCelebrationView(milestone: milestone) {
+                    showingMilestone = false
+                }
+                .transition(.opacity)
             }
         }
+        .animation(.default, value: showingMilestone)
         .onAppear {
             checkForMilestone()
         }
     }
 
     private func checkForMilestone() {
-        if streak.isAtMilestone {
-            achievedMilestone = StreakMilestone.all.first { $0.days == streak.currentStreak }
-            showingMilestone = achievedMilestone != nil
-        }
+        guard streak.isAtMilestone,
+              !streak.celebratedMilestones.contains(streak.currentStreak),
+              let milestone = StreakMilestone.all.first(where: { $0.days == streak.currentStreak })
+        else { return }
+
+        achievedMilestone = milestone
+        showingMilestone = true
+        appState.dataManager.markMilestoneCelebrated(streak.currentStreak)
     }
 }
 
@@ -219,7 +227,7 @@ struct SimpleCalendarView: View {
         VStack(spacing: CPSpacing.sm) {
             // Weekday headers
             HStack {
-                ForEach(["S", "M", "T", "W", "T", "F", "S"], id: \.self) { day in
+                ForEach(Array(["S", "M", "T", "W", "T", "F", "S"].enumerated()), id: \.offset) { _, day in
                     Text(day)
                         .font(.cpCaption)
                         .foregroundStyle(Color.cpSecondaryLabel)
@@ -389,7 +397,7 @@ struct RuleRow: View {
 // MARK: - Milestone Celebration View
 struct MilestoneCelebrationView: View {
     let milestone: StreakMilestone
-    @Environment(\.dismiss) private var dismiss
+    let onContinue: () -> Void
 
     var body: some View {
         VStack(spacing: CPSpacing.xxl) {
@@ -422,7 +430,7 @@ struct MilestoneCelebrationView: View {
             Spacer()
 
             Button("Continue") {
-                dismiss()
+                onContinue()
             }
             .cpPrimaryButton()
             .padding(.horizontal, CPSpacing.xl)

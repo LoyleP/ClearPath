@@ -10,6 +10,7 @@ This document describes the technical architecture of ClearPath, a financial lit
 4. [Feature Modules](#feature-modules)
 5. [Design System](#design-system)
 6. [Concurrency Model](#concurrency-model)
+7. [Common Pitfalls](#common-pitfalls)
 
 ---
 
@@ -448,6 +449,52 @@ setupActiveUser()
 setupProUser()
 setupTrialEndingUser()
 ```
+
+**Access control note**: `AppStateController.state`, `AppDataManager.streak`, and `AppDataManager.userProgress` are `private(set)`. Since Swift `private` is file-scoped, `DebugMenu.swift` cannot assign to them directly — even via extension. `#if DEBUG` mutator methods (`forceState`, `debugSetStreak`, `debugSetConceptMastery`) live in the same file as each owning class specifically so they retain access to the private setter. See [CONTRIBUTING.md](CONTRIBUTING.md#adding-debug-actions) before adding new debug mutations.
+
+---
+
+## Common Pitfalls
+
+### Avoid Nested Sheet Presentations
+
+Do not present a `.sheet` from within a view that is itself already being presented as a `.sheet`, especially synchronously from `.onAppear`. This races against the parent sheet's own UIKit presentation-controller transition and can render as a fully blank, chrome-less modal.
+
+**Bug encountered**: `StreakDetailView` (itself presented via `.sheet` from `MainTabView`) called `checkForMilestone()` in `.onAppear`, which triggered a second `.sheet(isPresented: $showingMilestone)` to show `MilestoneCelebrationView`. This produced a blank sheet every time the streak was at a milestone value (7/30/100/365 days).
+
+**Fix**: Present secondary content that should appear within an already-presented sheet using `.overlay` + `.transition`/`.animation` instead of a second `.sheet`. This avoids a second UIKit presentation controller entirely, sidestepping the race condition.
+
+```swift
+// ❌ Avoid — sheet-on-sheet
+.sheet(isPresented: $showingMilestone) {
+    MilestoneCelebrationView(milestone: milestone)
+}
+
+// ✅ Prefer — overlay within the existing presentation
+.overlay {
+    if showingMilestone {
+        MilestoneCelebrationView(milestone: milestone) {
+            showingMilestone = false
+        }
+        .transition(.opacity)
+    }
+}
+.animation(.default, value: showingMilestone)
+```
+
+### ForEach Requires Unique IDs
+
+`ForEach(_:id:)` requires unique identifiers. Using `id: \.self` on a collection with duplicate values (e.g. weekday initials `["S","M","T","W","T","F","S"]`) triggers SwiftUI Fault-level diagnostics and undefined rendering behavior. Use `.enumerated()` with `id: \.offset` for collections that may contain repeated values:
+
+```swift
+ForEach(Array(days.enumerated()), id: \.offset) { _, day in
+    Text(day)
+}
+```
+
+### One-Time Events Need Persisted State
+
+A condition based purely on current data state (e.g. `streak.currentStreak == 7`) will re-trigger every time that state is observed — including every time the containing view reappears. For one-time events like milestone celebrations, persist which events have already fired (`Streak.celebratedMilestones: Set<Int>`) and check against that set, not just the raw condition.
 
 ---
 

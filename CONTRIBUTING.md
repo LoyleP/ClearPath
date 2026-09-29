@@ -38,7 +38,13 @@ This guide covers development setup, coding standards, and contribution workflow
    - Scheme: `ClearPath`
    - Destination: Any iOS 17+ simulator
 
-4. **Build and run**
+4. **Set your own bundle identifier and team**
+   - `PRODUCT_BUNDLE_IDENTIFIER` must be globally unique across *all* Apple Developer accounts, not just yours — the checked-in value is a placeholder and will fail registration under your team.
+   - In Xcode: select the `ClearPath` target → **Signing & Capabilities** → set **Team** to your own, and change **Bundle Identifier** to something you control (e.g. `com.<yourname>.clearpath`).
+   - Keep `CODE_SIGN_STYLE = Automatic` — Xcode will generate a matching provisioning profile once the identifier is unique.
+   - If signing errors persist after changing the identifier, toggle "Automatically manage signing" off/on to force Xcode to refresh the profile.
+
+5. **Build and run**
    - Press `Cmd+R` or click the Play button
 
 ### First Run
@@ -208,6 +214,10 @@ var body: some View {
 }
 ```
 
+#### Avoid Nested Sheet Presentations
+
+Never present a `.sheet` from within a view that is itself already presented as a `.sheet` — especially synchronously from `.onAppear`. This races against the parent sheet's own presentation transition and can render as a fully blank modal. Use `.overlay` + `.transition`/`.animation` instead for content that should appear within an already-presented sheet. See [ARCHITECTURE.md](ARCHITECTURE.md#common-pitfalls) for the full example.
+
 ### Concurrency
 
 #### Use @MainActor for UI
@@ -289,13 +299,37 @@ Jump directly to any screen:
 
 ### Adding Debug Actions
 
+`AppStateController.state`, `AppDataManager.streak`, and `AppDataManager.userProgress` are all `private(set)`. Swift's `private` is scoped to the **file**, not the type — `DebugMenu.swift` is a different file, so it cannot assign to these properties directly, even through an `extension`.
+
+**Pattern**: if your debug action only calls existing public methods (`createUser`, `completeLesson`, `resetAllData`, etc.), add it straight to `DebugMenu.swift`:
+
 ```swift
 // In DebugMenu.swift
 Section("My Debug Actions") {
     Button("My Action") {
-        // Debug action
+        appState.dataManager.someExistingPublicMethod()
         dismiss()
     }
+}
+```
+
+**If you need to mutate a `private(set)` property directly**, add a `#if DEBUG` helper method in the *same file* as the owning class (`AppState.swift` for `AppStateController`, `AppDataManager.swift` for `AppDataManager`), then call that helper from `DebugMenu.swift`:
+
+```swift
+// In AppDataManager.swift, inside the Debug Helpers section
+#if DEBUG
+func debugSetSomething(_ value: Something) {
+    someProperty = value
+    saveData()
+}
+#endif
+```
+
+```swift
+// In DebugMenu.swift
+Button("My Action") {
+    appState.dataManager.debugSetSomething(value)
+    dismiss()
 }
 ```
 
